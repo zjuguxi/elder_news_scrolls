@@ -12,6 +12,7 @@
   white-space: nowrap;
   overflow: hidden;
   z-index: 1000;
+  cursor: pointer;
 }
 
 .news-ticker-content {
@@ -22,8 +23,7 @@
 
 /* 鼠标悬停时暂停滚动 */
 .news-ticker:hover .news-ticker-content {
-  animation-play-state: paused;
-  cursor: pointer;
+  animation-play-state: paused !important;
 }
 
 @keyframes ticker {
