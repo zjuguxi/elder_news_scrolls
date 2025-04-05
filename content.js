@@ -81,11 +81,51 @@ function calculateDuration(speed) {
 
 // 处理点击事件
 function handleTickerClick(event) {
-  // 如果有新闻数据，打开第一条新闻的链接
+  // 防止事件冒泡
+  event.stopPropagation();
+  
+  // 如果是错误消息，打开选项页面
+  if (event.target.style.color === 'rgb(255, 68, 68)') {
+    chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
+    return;
+  }
+  
+  // 如果有新闻数据，打开对应的新闻链接
   if (currentHeadlines.length > 0) {
-    const firstArticle = currentHeadlines[0];
-    if (firstArticle.url) {
-      window.open(firstArticle.url, '_blank');
+    // 获取点击位置相对于ticker的偏移量
+    const tickerRect = event.target.getBoundingClientRect();
+    const clickX = event.clientX - tickerRect.left;
+    
+    // 获取当前显示的文本内容
+    const textContent = event.target.textContent;
+    
+    // 分割新闻项（考虑分隔符），保留空格
+    const newsItems = textContent.split('✧').map(item => item.trim());
+    
+    // 计算每个新闻项的宽度
+    const totalWidth = tickerRect.width;
+    const newsCount = newsItems.length;
+    const newsWidth = totalWidth / newsCount;
+    
+    // 计算点击位置对应的新闻索引
+    const index = Math.floor(clickX / newsWidth);
+    
+    // 确保索引在有效范围内
+    if (index >= 0 && index < newsItems.length) {
+      // 获取点击位置对应的新闻文本
+      const clickedNewsText = newsItems[index];
+      
+      // 在currentHeadlines中查找匹配的新闻
+      const matchedArticle = currentHeadlines.find(article => {
+        // 移除emoji和分隔符，只比较纯文本
+        const cleanTitle = article.title.replace(/[^\w\s]/g, '').trim();
+        const cleanClickedText = clickedNewsText.replace(/[^\w\s]/g, '').trim();
+        return cleanTitle === cleanClickedText;
+      });
+      
+      if (matchedArticle && matchedArticle.url) {
+        window.open(matchedArticle.url, '_blank');
+      }
     }
   }
 }
@@ -103,15 +143,10 @@ function updateTicker(text, isError = false, headlines = []) {
     content.style.color = '#ff4444';
     content.style.cursor = 'pointer';
     content.style.textDecoration = 'underline';
-    content.onclick = () => {
-      // 打开选项页面
-      chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
-    };
   } else {
     content.style.color = '#ffffff';
-    content.style.cursor = 'pointer';
+    content.style.cursor = 'default'; // 默认光标样式改为default
     content.style.textDecoration = 'none';
-    content.onclick = handleTickerClick;
   }
   
   content.textContent = text;
