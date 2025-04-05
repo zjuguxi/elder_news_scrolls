@@ -6,12 +6,60 @@ const DEFAULT_SETTINGS = {
 let currentSettings = DEFAULT_SETTINGS;
 let currentHeadlines = []; // 存储当前的新闻数据
 
+// 创建视口容器
+function createViewportContainer() {
+  // 创建主容器
+  const container = document.createElement('div');
+  container.id = 'elder-news-container';
+  container.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    z-index: 0;
+  `;
+
+  // 创建内容区域
+  const contentArea = document.createElement('div');
+  contentArea.id = 'elder-news-content';
+  contentArea.style.cssText = `
+    flex: 1;
+    overflow: auto;
+    position: relative;
+  `;
+
+  // 创建滚动框区域
+  const tickerArea = document.createElement('div');
+  tickerArea.id = 'elder-news-ticker-area';
+  tickerArea.style.cssText = `
+    height: 30px;
+    background-color: #333;
+    position: relative;
+    overflow: hidden;
+  `;
+
+  // 将原始body内容移动到contentArea
+  while (document.body.firstChild) {
+    contentArea.appendChild(document.body.firstChild);
+  }
+
+  // 组装容器
+  container.appendChild(contentArea);
+  container.appendChild(tickerArea);
+  document.body.appendChild(container);
+
+  return tickerArea;
+}
+
 // Create and inject the ticker element
 function createTicker() {
   console.log('Creating ticker element...');
-  const ticker = document.createElement('div');
-  ticker.className = 'news-ticker';
-  ticker.style.zIndex = '999999';  // 确保显示在最上层
+  
+  // 创建视口容器并获取ticker区域
+  const tickerArea = createViewportContainer();
   
   const content = document.createElement('div');
   content.className = 'news-ticker-content';
@@ -20,13 +68,12 @@ function createTicker() {
   // 添加点击事件处理
   content.addEventListener('click', handleTickerClick);
   
-  ticker.appendChild(content);
-  document.body.appendChild(ticker);
+  tickerArea.appendChild(content);
   console.log('Ticker element created and added to page');
   return content;
 }
 
-// Calculate animation duration based on speed setting
+// Calculate animation duration based on speed
 function calculateDuration(speed) {
   // Convert speed (1-100) to duration (120-20 seconds)
   return 120 - (speed - 1) * (100 / 99);
