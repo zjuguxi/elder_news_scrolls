@@ -1,5 +1,8 @@
 const API_KEY = 'a91e2ede0df042e5ba465c78b188f261';
-const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutes
+const DEFAULT_REFRESH_INTERVAL = 15; // minutes
+
+let refreshTimer = null;
+let currentInterval = DEFAULT_REFRESH_INTERVAL;
 
 // 存储最新的headlines，用于新标签页加载时
 let latestHeadlines = '';
@@ -44,7 +47,8 @@ async function fetchNews() {
       // Store the headlines and articles
       await chrome.storage.local.set({ 
         headlines,
-        articles
+        articles,
+        lastUpdate: Date.now()
       });
       console.log('Headlines and articles stored in local storage');
       
@@ -89,10 +93,43 @@ async function fetchNews() {
   }
 }
 
-// Initial fetch
-console.log('Starting initial news fetch...');
-fetchNews();
+// Update refresh interval and restart timer
+function updateRefreshInterval(minutes) {
+  console.log('Updating refresh interval to', minutes, 'minutes');
+  currentInterval = minutes;
+  
+  // Clear existing timer
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+  }
+  
+  // Set new timer
+  const milliseconds = minutes * 60 * 1000;
+  refreshTimer = setInterval(fetchNews, milliseconds);
+  
+  // Fetch immediately
+  fetchNews();
+}
 
-// Set up periodic refresh
-console.log('Setting up periodic refresh...');
-setInterval(fetchNews, REFRESH_INTERVAL); 
+// Listen for messages
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'UPDATE_REFRESH_INTERVAL') {
+    updateRefreshInterval(message.interval);
+  }
+});
+
+// Initialize
+async function initialize() {
+  // Load saved settings
+  try {
+    const result = await chrome.storage.local.get('settings');
+    const settings = result.settings || { refreshInterval: DEFAULT_REFRESH_INTERVAL };
+    updateRefreshInterval(settings.refreshInterval);
+  } catch (err) {
+    console.error('Error loading settings:', err);
+    updateRefreshInterval(DEFAULT_REFRESH_INTERVAL);
+  }
+}
+
+// Start initialization
+initialize(); 

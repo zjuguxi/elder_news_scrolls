@@ -32,6 +32,14 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
+
+    select {
+      width: 120px;
+      padding: 5px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background-color: white;
+    }
     
     .button-group {
       display: flex;
@@ -72,6 +80,16 @@
       background-color: #f2dede;
       color: #a94442;
     }
+
+    .warning {
+      background-color: #fcf8e3;
+      color: #8a6d3b;
+      display: none;
+      margin-top: 5px;
+      padding: 5px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -79,6 +97,20 @@
     <label for="scrollSpeed">Scroll Speed</label>
     <input type="number" id="scrollSpeed" min="1" max="100" value="50">
     <div class="help-text">1 = Slowest, 100 = Fastest (Default: 50)</div>
+  </div>
+
+  <div class="setting-group">
+    <label for="refreshInterval">Refresh Interval</label>
+    <select id="refreshInterval">
+      <option value="5">5 minutes</option>
+      <option value="15" selected>15 minutes</option>
+      <option value="30">30 minutes</option>
+      <option value="60">1 hour</option>
+    </select>
+    <div class="help-text">How often to fetch new headlines</div>
+    <div id="apiWarning" class="warning">
+      Warning: 5-minute interval exceeds API daily limit (288 requests/day)
+    </div>
   </div>
   
   <div class="button-group">
