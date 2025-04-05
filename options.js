@@ -1,5 +1,6 @@
 // Default settings
 const DEFAULT_SETTINGS = {
+  apiKey: '',
   scrollSpeed: 50,
   refreshInterval: 15
 };
@@ -22,14 +23,61 @@ function updateWarning() {
   warning.style.display = refreshInterval === 5 ? 'block' : 'none';
 }
 
+// Validate API Key
+async function validateApiKey(apiKey) {
+  if (!apiKey) {
+    return { valid: false, message: 'API Key is required' };
+  }
+
+  try {
+    const response = await fetch(`https://newsapi.org/v2/top-headlines?country=us&apiKey=${apiKey}`, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Chrome Extension'
+      }
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      return { 
+        valid: false, 
+        message: error.message || 'Invalid API Key'
+      };
+    }
+
+    return { valid: true, message: 'API Key is valid' };
+  } catch (error) {
+    return { 
+      valid: false, 
+      message: 'Error validating API Key: ' + error.message 
+    };
+  }
+}
+
+// Update API status
+function updateApiStatus(message, isError = false) {
+  const status = document.getElementById('apiStatus');
+  status.textContent = message;
+  status.style.color = isError ? '#a94442' : '#3c763d';
+}
+
 // Load settings
 async function loadSettings() {
   try {
     const result = await chrome.storage.local.get('settings');
     const settings = result.settings || DEFAULT_SETTINGS;
+    
+    document.getElementById('apiKey').value = settings.apiKey || '';
     document.getElementById('scrollSpeed').value = settings.scrollSpeed;
     document.getElementById('refreshInterval').value = settings.refreshInterval;
+    
     updateWarning();
+    
+    // Validate API Key if exists
+    if (settings.apiKey) {
+      const validation = await validateApiKey(settings.apiKey);
+      updateApiStatus(validation.message, !validation.valid);
+    }
   } catch (error) {
     console.error('Error loading settings:', error);
     showStatus('Error loading settings', true);
@@ -39,6 +87,7 @@ async function loadSettings() {
 // Save settings
 async function saveSettings() {
   try {
+    const apiKey = document.getElementById('apiKey').value.trim();
     const scrollSpeed = parseInt(document.getElementById('scrollSpeed').value);
     const refreshInterval = parseInt(document.getElementById('refreshInterval').value);
     
@@ -48,13 +97,16 @@ async function saveSettings() {
       return;
     }
     
-    // Get existing settings
-    const result = await chrome.storage.local.get('settings');
-    const existingSettings = result.settings || {};
+    // Validate API Key
+    const validation = await validateApiKey(apiKey);
+    if (!validation.valid) {
+      showStatus(validation.message, true);
+      updateApiStatus(validation.message, true);
+      return;
+    }
     
-    // Update only the settings that are in the popup
     const settings = { 
-      ...existingSettings,
+      apiKey,
       scrollSpeed, 
       refreshInterval 
     };
@@ -69,6 +121,7 @@ async function saveSettings() {
     });
     
     showStatus('Settings saved successfully');
+    updateApiStatus(validation.message);
   } catch (error) {
     console.error('Error saving settings:', error);
     showStatus('Error saving settings', true);
@@ -78,9 +131,13 @@ async function saveSettings() {
 // Reset settings
 async function resetSettings() {
   try {
+    document.getElementById('apiKey').value = DEFAULT_SETTINGS.apiKey;
     document.getElementById('scrollSpeed').value = DEFAULT_SETTINGS.scrollSpeed;
     document.getElementById('refreshInterval').value = DEFAULT_SETTINGS.refreshInterval;
+    
     updateWarning();
+    updateApiStatus('');
+    
     await saveSettings();
     showStatus('Settings reset to default');
   } catch (error) {
@@ -89,12 +146,7 @@ async function resetSettings() {
   }
 }
 
-// Open options page
-function openOptionsPage() {
-  chrome.runtime.openOptionsPage();
-}
-
-// Initialize popup
+// Initialize options page
 document.addEventListener('DOMContentLoaded', () => {
   // Load current settings
   loadSettings();
@@ -103,5 +155,15 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveButton').addEventListener('click', saveSettings);
   document.getElementById('resetButton').addEventListener('click', resetSettings);
   document.getElementById('refreshInterval').addEventListener('change', updateWarning);
-  document.getElementById('openOptions').addEventListener('click', openOptionsPage);
+  
+  // Add API Key validation on input
+  document.getElementById('apiKey').addEventListener('input', async (e) => {
+    const apiKey = e.target.value.trim();
+    if (apiKey) {
+      const validation = await validateApiKey(apiKey);
+      updateApiStatus(validation.message, !validation.valid);
+    } else {
+      updateApiStatus('');
+    }
+  });
 }); 

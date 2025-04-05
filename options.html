@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Elder News Scrolls Settings</title>
+  <style>
+    body {
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+    }
+    
+    .container {
+      background-color: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 30px;
+    }
+    
+    .setting-group {
+      margin-bottom: 25px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+      color: #444;
+    }
+    
+    .help-text {
+      font-size: 14px;
+      color: #666;
+      margin-top: 5px;
+    }
+    
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    select {
+      width: 200px;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: white;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 15px;
+      margin-top: 30px;
+    }
+    
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.2s;
+    }
+    
+    #saveButton {
+      background-color: #4CAF50;
+      color: white;
+    }
+    
+    #saveButton:hover {
+      background-color: #45a049;
+    }
+    
+    #resetButton {
+      background-color: #f44336;
+      color: white;
+    }
+    
+    #resetButton:hover {
+      background-color: #da190b;
+    }
+    
+    .status {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+      display: none;
+    }
+    
+    .success {
+      background-color: #dff0d8;
+      color: #3c763d;
+    }
+    
+    .error {
+      background-color: #f2dede;
+      color: #a94442;
+    }
+    
+    .warning {
+      background-color: #fcf8e3;
+      color: #8a6d3b;
+      display: none;
+      margin-top: 5px;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .api-status {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Elder News Scrolls Settings</h1>
+    
+    <div class="setting-group">
+      <label for="apiKey">NewsAPI Key</label>
+      <input type="text" id="apiKey" placeholder="Enter your NewsAPI key">
+      <div class="help-text">Get your API key from <a href="https://newsapi.org" target="_blank">NewsAPI.org</a></div>
+      <div id="apiStatus" class="api-status"></div>
+    </div>
+
+    <div class="setting-group">
+      <label for="scrollSpeed">Scroll Speed</label>
+      <input type="number" id="scrollSpeed" min="1" max="100" value="50">
+      <div class="help-text">1 = Slowest, 100 = Fastest (Default: 50)</div>
+    </div>
+
+    <div class="setting-group">
+      <label for="refreshInterval">Refresh Interval</label>
+      <select id="refreshInterval">
+        <option value="5">5 minutes</option>
+        <option value="15" selected>15 minutes</option>
+        <option value="30">30 minutes</option>
+        <option value="60">1 hour</option>
+      </select>
+      <div class="help-text">How often to fetch new headlines</div>
+      <div id="apiWarning" class="warning">
+        Warning: 5-minute interval exceeds API daily limit (288 requests/day)
+      </div>
+    </div>
+    
+    <div class="button-group">
+      <button id="saveButton">Save Settings</button>
+      <button id="resetButton">Reset to Default</button>
+    </div>
+    
+    <div id="status" class="status"></div>
+  </div>
+  
+  <script src="options.js"></script>
+</body>
+</html> 

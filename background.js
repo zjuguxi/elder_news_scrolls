@@ -1,8 +1,8 @@
-const API_KEY = 'a91e2ede0df042e5ba465c78b188f261';
 const DEFAULT_REFRESH_INTERVAL = 15; // minutes
 
 let refreshTimer = null;
 let currentInterval = DEFAULT_REFRESH_INTERVAL;
+let currentApiKey = '';
 
 // 存储最新的headlines，用于新标签页加载时
 let latestHeadlines = '';
@@ -16,13 +16,40 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         headlines: latestHeadlines
       }).catch(console.error);
     }
+  } else if (message.type === 'OPEN_OPTIONS') {
+    // 打开选项页面
+    chrome.runtime.openOptionsPage();
   }
 });
 
 async function fetchNews() {
   console.log('Fetching news...');
+  
+  // Check if we have a valid API Key
+  if (!currentApiKey) {
+    console.log('No API Key configured');
+    const errorMessage = 'Please configure your NewsAPI Key in the extension settings.';
+    
+    // Store error message
+    await chrome.storage.local.set({ error: errorMessage });
+    
+    // Send error to active tabs
+    const tabs = await chrome.tabs.query({active: true});
+    for (const tab of tabs) {
+      try {
+        await chrome.tabs.sendMessage(tab.id, { 
+          type: 'ERROR',
+          message: errorMessage 
+        });
+      } catch (err) {
+        console.log('Could not send error to tab:', tab.id, err);
+      }
+    }
+    return;
+  }
+
   try {
-    const response = await fetch(`https://newsapi.org/v2/top-headlines?country=us&apiKey=${API_KEY}`, {
+    const response = await fetch(`https://newsapi.org/v2/top-headlines?country=us&apiKey=${currentApiKey}`, {
       headers: {
         'Accept': 'application/json',
         'User-Agent': 'Chrome Extension'
@@ -48,7 +75,8 @@ async function fetchNews() {
       await chrome.storage.local.set({ 
         headlines,
         articles,
-        lastUpdate: Date.now()
+        lastUpdate: Date.now(),
+        error: null // Clear any previous errors
       });
       console.log('Headlines and articles stored in local storage');
       
@@ -73,7 +101,7 @@ async function fetchNews() {
     }
   } catch (error) {
     console.error('Error fetching news:', error);
-    const errorMessage = 'Unable to fetch news. Please try again later.';
+    const errorMessage = 'Unable to fetch news. Please check your API Key and try again.';
     
     // Store error message
     await chrome.storage.local.set({ error: errorMessage });
@@ -113,8 +141,10 @@ function updateRefreshInterval(minutes) {
 
 // Listen for messages
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'UPDATE_REFRESH_INTERVAL') {
-    updateRefreshInterval(message.interval);
+  if (message.type === 'UPDATE_SETTINGS') {
+    const { apiKey, refreshInterval } = message.settings;
+    currentApiKey = apiKey;
+    updateRefreshInterval(refreshInterval);
   }
 });
 
@@ -123,7 +153,12 @@ async function initialize() {
   // Load saved settings
   try {
     const result = await chrome.storage.local.get('settings');
-    const settings = result.settings || { refreshInterval: DEFAULT_REFRESH_INTERVAL };
+    const settings = result.settings || { 
+      apiKey: '',
+      refreshInterval: DEFAULT_REFRESH_INTERVAL 
+    };
+    
+    currentApiKey = settings.apiKey;
     updateRefreshInterval(settings.refreshInterval);
   } catch (err) {
     console.error('Error loading settings:', err);

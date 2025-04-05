@@ -28,13 +28,8 @@ function createTicker() {
 
 // Calculate animation duration based on speed setting
 function calculateDuration(speed) {
-  // 线性映射速度值（1-100）到动画持续时间（300-20秒）
-  // 1 => 300秒（最慢）
-  // 100 => 20秒（最快）
-  const maxDuration = 300; // 最慢速度对应的持续时间
-  const minDuration = 20;  // 最快速度对应的持续时间
-  const duration = maxDuration - ((speed - 1) * (maxDuration - minDuration) / 99);
-  return Math.round(duration);
+  // Convert speed (1-100) to duration (120-20 seconds)
+  return 120 - (speed - 1) * (100 / 99);
 }
 
 // 处理点击事件
@@ -55,8 +50,24 @@ function updateTicker(text, isError = false, headlines = []) {
   if (!content) {
     content = createTicker();
   }
+  
+  // 如果是错误消息，添加特殊样式和点击事件
+  if (isError) {
+    content.style.color = '#ff4444';
+    content.style.cursor = 'pointer';
+    content.style.textDecoration = 'underline';
+    content.onclick = () => {
+      // 打开选项页面
+      chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
+    };
+  } else {
+    content.style.color = '#ffffff';
+    content.style.cursor = 'pointer';
+    content.style.textDecoration = 'none';
+    content.onclick = handleTickerClick;
+  }
+  
   content.textContent = text;
-  content.style.color = isError ? '#ff4444' : '#ffffff';
   
   // 存储新闻数据
   if (!isError && headlines.length > 0) {
