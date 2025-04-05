@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Elder News Scrolls",
+  "version": "1.0",
+  "description": "A simple news ticker extension that displays scrolling headlines",
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://newsapi.org/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "css": ["styles.css"],
+      "js": ["content.js"]
+    }
+  ],
+  "icons": {
+    "16": "icon.png"
+  }
+} 
