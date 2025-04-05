@@ -34,17 +34,19 @@ async function fetchNews() {
     console.log('Received news data:', data);
     
     if (data.articles && data.articles.length > 0) {
-      const headlines = data.articles
-        .slice(0, 10)
+      const articles = data.articles.slice(0, 10);
+      const headlines = articles
         .map(article => article.title)
         .join(' +++ ');
       
       console.log('Processed headlines:', headlines);
-      latestHeadlines = headlines;
       
-      // Store the headlines
-      await chrome.storage.local.set({ headlines });
-      console.log('Headlines stored in local storage');
+      // Store the headlines and articles
+      await chrome.storage.local.set({ 
+        headlines,
+        articles
+      });
+      console.log('Headlines and articles stored in local storage');
       
       // Notify content script
       const tabs = await chrome.tabs.query({active: true});
@@ -54,7 +56,8 @@ async function fetchNews() {
         try {
           await chrome.tabs.sendMessage(tab.id, { 
             type: 'UPDATE_HEADLINES',
-            headlines 
+            headlines,
+            articles
           });
           console.log('Message sent to tab:', tab.id);
         } catch (err) {

@@ -17,13 +17,13 @@
 .news-ticker-content {
   display: inline-block;
   padding-left: 100%;
-  animation: ticker 80s linear infinite;
   will-change: transform;
 }
 
 /* 鼠标悬停时暂停滚动 */
 .news-ticker:hover .news-ticker-content {
   animation-play-state: paused;
+  cursor: pointer;
 }
 
 @keyframes ticker {
