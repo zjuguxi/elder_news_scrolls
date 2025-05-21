@@ -85,7 +85,7 @@ function handleTickerClick(event) {
   if (currentHeadlines.length > 0) {
     const firstArticle = currentHeadlines[0];
     if (firstArticle.url) {
-      window.open(firstArticle.url, '_blank');
+      window.open(firstArticle.url, '_blank', 'noopener,noreferrer');
     }
   }
 }
@@ -114,6 +114,7 @@ function updateTicker(text, isError = false, headlines = []) {
     content.onclick = handleTickerClick;
   }
   
+  // Using textContent here is crucial for security as it prevents XSS vulnerabilities from potentially malicious API data.
   content.textContent = text;
   
   // 存储新闻数据
