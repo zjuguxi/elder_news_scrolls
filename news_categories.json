@@ -1,0 +1,42 @@
+{
+  "tech": {
+    "emoji": "💻",
+    "keywords": ["tech", "ai", "digital", "software", "computer", "internet", "cyber", "data", "app", "startup"]
+  },
+  "sports": {
+    "emoji": "⚽",
+    "keywords": ["sport", "game", "football", "basketball", "tennis", "olympic", "championship", "tournament", "league"]
+  },
+  "business": {
+    "emoji": "💰",
+    "keywords": ["business", "market", "economy", "finance", "stock", "trade", "company", "investment", "bank", "financial"]
+  },
+  "health": {
+    "emoji": "🏥",
+    "keywords": ["health", "medical", "hospital", "disease", "treatment", "doctor", "patient", "healthcare", "medicine"]
+  },
+  "science": {
+    "emoji": "🔬",
+    "keywords": ["science", "research", "study", "discovery", "scientist", "laboratory", "experiment", "innovation"]
+  },
+  "entertainment": {
+    "emoji": "🎬",
+    "keywords": ["entertainment", "movie", "music", "celebrity", "actor", "film", "show", "concert", "artist", "performance"]
+  },
+  "politics": {
+    "emoji": "🏛️",
+    "keywords": ["politics", "government", "election", "policy", "minister", "president", "congress", "parliament", "diplomatic"]
+  },
+  "environment": {
+    "emoji": "🌍",
+    "keywords": ["environment", "climate", "weather", "nature", "pollution", "green", "sustainable", "energy", "renewable"]
+  },
+  "education": {
+    "emoji": "📚",
+    "keywords": ["education", "school", "university", "student", "teacher", "academic", "study", "learning", "campus"]
+  },
+  "crime": {
+    "emoji": "🚨",
+    "keywords": ["crime", "police", "law", "court", "justice", "legal", "criminal", "investigation", "security"]
+  }
+}
