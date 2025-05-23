@@ -4,60 +4,24 @@ let refreshTimer = null;
 let currentInterval = DEFAULT_REFRESH_INTERVAL;
 let currentApiKey = '';
 
-// 存储最新的headlines，用于新标签页加载时
-let latestHeadlines = '';
+// 存储最新的articles array，用于新标签页加载时
+let latestArticles = [];
 
-// 新闻分类映射
-const NEWS_CATEGORIES = {
-  tech: {
-    emoji: '💻',
-    keywords: ['tech', 'ai', 'digital', 'software', 'computer', 'internet', 'cyber', 'data', 'app', 'startup']
-  },
-  sports: {
-    emoji: '⚽',
-    keywords: ['sport', 'game', 'football', 'basketball', 'tennis', 'olympic', 'championship', 'tournament', 'league']
-  },
-  business: {
-    emoji: '💰',
-    keywords: ['business', 'market', 'economy', 'finance', 'stock', 'trade', 'company', 'investment', 'bank', 'financial']
-  },
-  health: {
-    emoji: '🏥',
-    keywords: ['health', 'medical', 'hospital', 'disease', 'treatment', 'doctor', 'patient', 'healthcare', 'medicine']
-  },
-  science: {
-    emoji: '🔬',
-    keywords: ['science', 'research', 'study', 'discovery', 'scientist', 'laboratory', 'experiment', 'innovation']
-  },
-  entertainment: {
-    emoji: '🎬',
-    keywords: ['entertainment', 'movie', 'music', 'celebrity', 'actor', 'film', 'show', 'concert', 'artist', 'performance']
-  },
-  politics: {
-    emoji: '🏛️',
-    keywords: ['politics', 'government', 'election', 'policy', 'minister', 'president', 'congress', 'parliament', 'diplomatic']
-  },
-  environment: {
-    emoji: '🌍',
-    keywords: ['environment', 'climate', 'weather', 'nature', 'pollution', 'green', 'sustainable', 'energy', 'renewable']
-  },
-  education: {
-    emoji: '📚',
-    keywords: ['education', 'school', 'university', 'student', 'teacher', 'academic', 'study', 'learning', 'campus']
-  },
-  crime: {
-    emoji: '🚨',
-    keywords: ['crime', 'police', 'law', 'court', 'justice', 'legal', 'criminal', 'investigation', 'security']
-  }
-};
+// This will hold the categories loaded from news_categories.json
+let loadedNewsCategories = {};
 
 // 获取新闻分类
 function getNewsCategory(title) {
+  // Fallback if categories haven't loaded or are empty
+  if (Object.keys(loadedNewsCategories).length === 0) {
+    return '📰'; 
+  }
+
   const lowerTitle = title.toLowerCase();
   
   // 遍历所有分类，查找匹配的关键词
-  for (const [category, data] of Object.entries(NEWS_CATEGORIES)) {
-    if (data.keywords.some(keyword => lowerTitle.includes(keyword))) {
+  for (const [category, data] of Object.entries(loadedNewsCategories)) {
+    if (data.keywords && data.keywords.some(keyword => lowerTitle.includes(keyword))) {
       return data.emoji;
     }
   }
@@ -66,21 +30,21 @@ function getNewsCategory(title) {
   return '📰';
 }
 
-// 格式化新闻标题
-function formatHeadline(article) {
-  const emoji = getNewsCategory(article.title);
-  // 使用实际空格而不是 HTML 实体
-  return `${emoji} ${article.title}   ✧   `;
+// Modifies the article object to add an emoji property.
+function addEmojiToArticle(article) {
+  article.emoji = getNewsCategory(article.title);
+  return article; // Return the modified article
 }
 
 // 监听content script准备就绪的消息
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'CONTENT_SCRIPT_READY') {
-    if (latestHeadlines) {
+    // Send the latest articles array if available
+    if (latestArticles && latestArticles.length > 0) {
       chrome.tabs.sendMessage(sender.tab.id, {
         type: 'UPDATE_HEADLINES',
-        headlines: latestHeadlines
-      }).catch(console.error);
+        articles: latestArticles // Send the array of articles
+      }).catch(err => console.log('Error sending initial articles to tab:', err));
     }
   } else if (message.type === 'OPEN_OPTIONS') {
     // 打开选项页面
@@ -115,75 +79,87 @@ async function fetchNews() {
   }
 
   try {
-    const response = await fetch(`https://newsapi.org/v2/top-headlines?country=us`, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Chrome Extension',
-        'X-Api-Key': currentApiKey
-      }
-    });
+    // MOCKING START: Simulate "No Articles" response
+    const data = {
+      status: "ok",
+      totalResults: 0,
+      articles: []
+    };
+    console.log('Using MOCKED news data (No Articles):', data);
+    // MOCKING END
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    // Original logic continues below, processing the mocked 'data'
 
-    const data = await response.json();
-    console.log('Received news data:', data);
-    
-    if (data.articles && data.articles.length > 0) {
-      const articles = data.articles.slice(0, 10);
-      // Ensure that any display of these headlines in HTML contexts uses textContent or proper sanitization to prevent XSS.
-      const headlines = articles
-        .map((article, index) => formatHeadline(article))
-        .join('');
-      
-      console.log('Processed headlines:', headlines);
-      
-      // Store the headlines and articles
+    // Handle scenario where API returns success but no articles
+    if (data.articles && data.articles.length === 0 || data.totalResults === 0) {
+      console.log('No articles found in the API response.');
+      const noArticlesMessage = 'No articles found at the moment. Try again later.';
+      latestArticles = []; // Clear cache
       await chrome.storage.local.set({ 
-        headlines,
-        articles,
-        lastUpdate: Date.now(),
-        error: null // Clear any previous errors
+        articles: [], // Ensure stored articles are cleared
+        error: noArticlesMessage, // Store as an informational message/error
+        lastUpdate: Date.now() 
       });
-      console.log('Headlines and articles stored in local storage');
       
-      // Notify content script
       const tabs = await chrome.tabs.query({active: true});
-      console.log('Found active tabs:', tabs.length);
+      for (const tab of tabs) {
+        try {
+          await chrome.tabs.sendMessage(tab.id, { 
+            type: 'INFO_MESSAGE', // Use a new type for non-critical info
+            message: noArticlesMessage 
+          });
+        } catch (err) {
+          console.log('Could not send "no articles" message to tab:', tab.id, err);
+        }
+      }
+      return; // Exit fetchNews early
+    }
+    
+    // Proceed if articles are found (original logic from here)
+    if (data.articles && data.articles.length > 0) {
+      const processedArticles = data.articles.slice(0, 10).map(article => addEmojiToArticle(article));
+      console.log('Processed articles with emojis:', processedArticles);
+      latestArticles = processedArticles;
       
+      await chrome.storage.local.set({ 
+        articles: processedArticles,
+        lastUpdate: Date.now(),
+        error: null 
+      });
+      console.log('Processed articles stored in local storage');
+      
+      const tabs = await chrome.tabs.query({active: true});
       for (const tab of tabs) {
         try {
           await chrome.tabs.sendMessage(tab.id, { 
             type: 'UPDATE_HEADLINES',
-            headlines,
-            articles
+            articles: processedArticles 
           });
           console.log('Message sent to tab:', tab.id);
         } catch (err) {
           console.log('Could not send to tab:', tab.id, err);
         }
       }
-    } else {
-      throw new Error('No articles found in the response');
+    } else { 
+      // This else block might be redundant now due to the check above,
+      // but kept for safety in case data.articles is null or undefined initially.
+      throw new Error('No articles found in the response or response structure error.');
     }
   } catch (error) {
-    console.error('Error fetching news:', error);
-    const errorMessage = 'Unable to fetch news. Please check your API Key and try again.';
+    console.error('Error fetching news:', error.message); // Log only message for brevity
+    const errorMessage = 'Unable to fetch news. Please check your API Key and network connection.';
+    latestArticles = []; // Clear cache on error too
+    await chrome.storage.local.set({ articles: [], error: errorMessage }); // Clear articles from storage
     
-    // Store error message
-    await chrome.storage.local.set({ error: errorMessage });
-    
-    // Send error to active tabs only
     const tabs = await chrome.tabs.query({active: true});
     for (const tab of tabs) {
       try {
         await chrome.tabs.sendMessage(tab.id, { 
-          type: 'ERROR',
+          type: 'ERROR', // Critical error
           message: errorMessage 
         });
       } catch (err) {
-        console.log('Could not send error to tab:', tab.id, err);
+        console.log('Could not send critical error to tab:', tab.id, err);
       }
     }
   }
@@ -201,38 +177,71 @@ function updateRefreshInterval(minutes) {
   
   // Set new timer
   const milliseconds = minutes * 60 * 1000;
-  refreshTimer = setInterval(fetchNews, milliseconds);
+  // Ensure fetchNews is defined before being used if it's part of a larger file
+  // and potentially hoisted differently. For this example, it's fine.
+  refreshTimer = setInterval(() => fetchNews().catch(console.error), milliseconds);
   
   // Fetch immediately
-  fetchNews();
+  fetchNews().catch(console.error);
 }
 
-// Listen for messages
+// Main message listener for settings updates
+// Note: The onMessage listener for CONTENT_SCRIPT_READY is defined earlier.
+// Chrome allows multiple onMessage listeners.
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'UPDATE_SETTINGS') {
     const { apiKey, refreshInterval } = message.settings;
-    currentApiKey = apiKey;
-    updateRefreshInterval(refreshInterval);
+    if (apiKey !== undefined) {
+      currentApiKey = apiKey;
+    }
+    if (refreshInterval !== undefined) {
+      updateRefreshInterval(refreshInterval);
+    }
   }
 });
 
 // Initialize
 async function initialize() {
-  // Load saved settings
+  // Load news categories first
   try {
-    const result = await chrome.storage.local.get('settings');
+    const response = await fetch(chrome.runtime.getURL('news_categories.json'));
+    if (!response.ok) {
+      throw new Error(`Failed to fetch news_categories.json: ${response.statusText}`);
+    }
+    loadedNewsCategories = await response.json();
+    console.log('News categories loaded successfully:', loadedNewsCategories);
+  } catch (err) {
+    console.error('Error loading news_categories.json:', err);
+    // Fallback to an empty object or minimal default if loading fails
+    loadedNewsCategories = {
+      general: { emoji: '📰', keywords: [] } // Minimal fallback
+    }; 
+  }
+
+  // Load saved settings, articles, and any stored error/info message
+  try {
+    const result = await chrome.storage.local.get(['settings', 'articles', 'error']);
     const settings = result.settings || { 
       apiKey: '',
       refreshInterval: DEFAULT_REFRESH_INTERVAL 
     };
     
+    // If there are stored articles, they become the latestArticles.
+    // If not, latestArticles remains empty array as initialized.
+    if (result.articles && result.articles.length > 0) {
+      latestArticles = result.articles;
+    }
+    // Note: A stored 'error' that is actually an info message (like "No articles...")
+    // will be handled by content.js when it receives the initial data.
+    // Background script primarily uses latestArticles for CONTENT_SCRIPT_READY.
+    
     currentApiKey = settings.apiKey;
-    updateRefreshInterval(settings.refreshInterval);
+    updateRefreshInterval(settings.refreshInterval); 
   } catch (err) {
-    console.error('Error loading settings:', err);
+    console.error('Error during initialization:', err);
     updateRefreshInterval(DEFAULT_REFRESH_INTERVAL);
   }
 }
 
 // Start initialization
-initialize(); 
+initialize();
