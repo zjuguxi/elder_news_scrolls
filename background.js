@@ -69,8 +69,8 @@ function getNewsCategory(title) {
 // 格式化新闻标题
 function formatHeadline(article) {
   const emoji = getNewsCategory(article.title);
-  // 使用 HTML 实体空格 &nbsp; 来确保空格不会被压缩
-  return `${emoji} ${article.title}&nbsp;&nbsp;&nbsp;✧&nbsp;&nbsp;&nbsp;`;
+  // 使用实际空格而不是 HTML 实体
+  return `${emoji} ${article.title}   ✧   `;
 }
 
 // 监听content script准备就绪的消息
