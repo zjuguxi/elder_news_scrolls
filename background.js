@@ -88,7 +88,23 @@ async function fetchNews() {
     console.log('Using MOCKED news data (No Articles):', data);
     // MOCKING END
 
-    // Original logic continues below, processing the mocked 'data'
+    if (!response.ok) {
+      // Attempt to parse error response from NewsAPI
+      let apiErrorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        if (errorData && errorData.message) {
+          apiErrorMessage = errorData.message;
+        }
+      } catch (e) {
+        // Could not parse JSON, use the HTTP status error
+        console.error('Could not parse error response JSON:', e);
+      }
+      throw new Error(apiErrorMessage);
+    }
+
+    const data = await response.json();
+    console.log('Received news data:', data);
 
     // Handle scenario where API returns success but no articles
     if (data.articles && data.articles.length === 0 || data.totalResults === 0) {
@@ -146,8 +162,12 @@ async function fetchNews() {
       throw new Error('No articles found in the response or response structure error.');
     }
   } catch (error) {
-    console.error('Error fetching news:', error.message); // Log only message for brevity
-    const errorMessage = 'Unable to fetch news. Please check your API Key and network connection.';
+    console.error('Error fetching news:', error.message); 
+    // The error.message here will be whatever was thrown:
+    // - "HTTP error! status: ..."
+    // - NewsAPI's specific message (e.g., "Your API key is invalid...")
+    // - "No articles found..." (if that path is taken)
+    const errorMessage = error.message; // Use the specific error message
     latestArticles = []; // Clear cache on error too
     await chrome.storage.local.set({ articles: [], error: errorMessage }); // Clear articles from storage
     

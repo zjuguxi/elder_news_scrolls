@@ -2,7 +2,8 @@
 const DEFAULT_SETTINGS = {
   apiKey: '',
   scrollSpeed: 50,
-  refreshInterval: 15
+  refreshInterval: 15,
+  enableTicker: true // Default to enabled
 };
 
 // Show status message
@@ -65,11 +66,13 @@ function updateApiStatus(message, isError = false) {
 async function loadSettings() {
   try {
     const result = await chrome.storage.local.get('settings');
-    const settings = result.settings || DEFAULT_SETTINGS;
+    // Ensure all DEFAULT_SETTINGS keys are present if settings are loaded
+    const settings = { ...DEFAULT_SETTINGS, ...(result.settings || {}) };
     
     document.getElementById('apiKey').value = settings.apiKey || '';
     document.getElementById('scrollSpeed').value = settings.scrollSpeed;
     document.getElementById('refreshInterval').value = settings.refreshInterval;
+    document.getElementById('enableTickerSwitch').checked = settings.enableTicker; 
     
     updateWarning();
     
@@ -90,6 +93,7 @@ async function saveSettings() {
     const apiKey = document.getElementById('apiKey').value.trim();
     const scrollSpeed = parseInt(document.getElementById('scrollSpeed').value);
     const refreshInterval = parseInt(document.getElementById('refreshInterval').value);
+    const enableTicker = document.getElementById('enableTickerSwitch').checked;
     
     // Validate scroll speed
     if (scrollSpeed < 1 || scrollSpeed > 100) {
@@ -108,7 +112,8 @@ async function saveSettings() {
     const settings = { 
       apiKey,
       scrollSpeed, 
-      refreshInterval 
+      refreshInterval,
+      enableTicker // Include enableTicker state
     };
     
     // Save to storage
@@ -134,11 +139,19 @@ async function resetSettings() {
     document.getElementById('apiKey').value = DEFAULT_SETTINGS.apiKey;
     document.getElementById('scrollSpeed').value = DEFAULT_SETTINGS.scrollSpeed;
     document.getElementById('refreshInterval').value = DEFAULT_SETTINGS.refreshInterval;
+    document.getElementById('enableTickerSwitch').checked = DEFAULT_SETTINGS.enableTicker;
     
     updateWarning();
     updateApiStatus('');
     
-    await saveSettings();
+    // Explicitly save default settings, don't rely on saveSettings() to pick up from form during reset
+    // because saveSettings() itself reads from the form, which might not be fully updated yet
+    // or to avoid re-validating API key unnecessarily during a simple reset.
+    await chrome.storage.local.set({ settings: DEFAULT_SETTINGS });
+    chrome.runtime.sendMessage({
+      type: 'UPDATE_SETTINGS',
+      settings: DEFAULT_SETTINGS
+    });
     showStatus('Settings reset to default');
   } catch (error) {
     console.error('Error resetting settings:', error);

@@ -1,3 +1,24 @@
+// Function to counteract problematic global styles that might affect page scrolling
+function ensurePageScrollability() {
+  console.log('Elder News Scrolls: Applying scroll override styles.');
+  if (document.documentElement) {
+    document.documentElement.style.setProperty('overflow', 'auto', 'important');
+    document.documentElement.style.setProperty('height', 'auto', 'important');
+  }
+  if (document.body) {
+    document.body.style.setProperty('overflow', 'auto', 'important');
+    document.body.style.setProperty('height', 'auto', 'important');
+  }
+}
+
+// Apply scroll overrides as early as possible.
+//DOMContentLoaded might be too late if styles.css is parsed and applied first.
+ensurePageScrollability(); 
+// Also ensure it runs again if the body is replaced or heavily modified by the page later.
+// However, for typical well-behaved pages, running it once early should be sufficient.
+// If pages dynamically re-apply `overflow:hidden` to body later, that's a harder problem
+// not solvable by just one-time override.
+
 // Default settings
 const DEFAULT_SETTINGS = {
   scrollSpeed: 50,
