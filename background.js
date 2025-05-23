@@ -115,10 +115,11 @@ async function fetchNews() {
   }
 
   try {
-    const response = await fetch(`https://newsapi.org/v2/top-headlines?country=us&apiKey=${currentApiKey}`, {
+    const response = await fetch(`https://newsapi.org/v2/top-headlines?country=us`, {
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'Chrome Extension'
+        'User-Agent': 'Chrome Extension',
+        'X-Api-Key': currentApiKey
       }
     });
 
@@ -131,6 +132,7 @@ async function fetchNews() {
     
     if (data.articles && data.articles.length > 0) {
       const articles = data.articles.slice(0, 10);
+      // Ensure that any display of these headlines in HTML contexts uses textContent or proper sanitization to prevent XSS.
       const headlines = articles
         .map((article, index) => formatHeadline(article))
         .join('');

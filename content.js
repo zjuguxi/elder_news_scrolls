@@ -1,6 +1,7 @@
 // Default settings
 const DEFAULT_SETTINGS = {
-  scrollSpeed: 50
+  scrollSpeed: 50,
+  enableTicker: true
 };
 
 let currentSettings = DEFAULT_SETTINGS;
@@ -8,8 +9,14 @@ let currentHeadlines = []; // 存储当前的新闻数据
 
 // 创建视口容器
 function createViewportContainer() {
+  // 检查是否已存在容器
+  let container = document.getElementById('elder-news-container');
+  if (container) {
+    return container.querySelector('#elder-news-ticker-area');
+  }
+
   // 创建主容器
-  const container = document.createElement('div');
+  container = document.createElement('div');
   container.id = 'elder-news-container';
   container.style.cssText = `
     position: fixed;
@@ -39,6 +46,7 @@ function createViewportContainer() {
     background-color: #333;
     position: relative;
     overflow: hidden;
+    display: ${currentSettings.enableTicker ? 'block' : 'none'};
   `;
 
   // 将原始body内容移动到contentArea
@@ -85,7 +93,7 @@ function handleTickerClick(event) {
   event.stopPropagation();
   
   // 如果是错误消息，打开选项页面
-  if (event.target.style.color === 'rgb(255, 68, 68)') {
+  if (event.target.classList.contains('error-message')) {
     chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
     return;
   }
@@ -124,7 +132,7 @@ function handleTickerClick(event) {
       });
       
       if (matchedArticle && matchedArticle.url) {
-        window.open(matchedArticle.url, '_blank');
+        window.open(matchedArticle.url, '_blank', 'noopener,noreferrer');
       }
     }
   }
@@ -140,15 +148,18 @@ function updateTicker(text, isError = false, headlines = []) {
   
   // 如果是错误消息，添加特殊样式和点击事件
   if (isError) {
+    content.classList.add('error-message');
     content.style.color = '#ff4444';
     content.style.cursor = 'pointer';
     content.style.textDecoration = 'underline';
   } else {
+    content.classList.remove('error-message');
     content.style.color = '#ffffff';
-    content.style.cursor = 'default'; // 默认光标样式改为default
+    content.style.cursor = 'default';
     content.style.textDecoration = 'none';
   }
   
+  // Using textContent here is crucial for security as it prevents XSS vulnerabilities from potentially malicious API data.
   content.textContent = text;
   
   // 存储新闻数据
@@ -164,10 +175,29 @@ function updateTicker(text, isError = false, headlines = []) {
 // Update settings
 function updateSettings(newSettings) {
   currentSettings = { ...currentSettings, ...newSettings };
+  
+  // 获取或创建容器
+  const container = document.getElementById('elder-news-container') || createViewportContainer();
+  const tickerArea = container.querySelector('#elder-news-ticker-area');
+  
+  // 更新ticker区域的显示状态
+  if (tickerArea) {
+    tickerArea.style.display = currentSettings.enableTicker ? 'block' : 'none';
+  }
+  
+  // 更新动画速度
   const content = document.querySelector('.news-ticker-content');
   if (content) {
     const duration = calculateDuration(currentSettings.scrollSpeed);
     content.style.animation = `ticker ${duration}s linear infinite`;
+  }
+  
+  // 如果禁用ticker，移除ticker内容
+  if (!currentSettings.enableTicker) {
+    const tickerContent = document.querySelector('.news-ticker-content');
+    if (tickerContent) {
+      tickerContent.remove();
+    }
   }
 }
 
@@ -186,19 +216,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Initialize
 async function initialize() {
-  // Create ticker
-  createTicker();
-  
-  // Load settings
+  // Load settings first
   try {
     const result = await chrome.storage.local.get(['settings', 'headlines', 'articles', 'error']);
     if (result.settings) {
       updateSettings(result.settings);
     }
-    if (result.error) {
-      updateTicker(result.error, true);
-    } else if (result.headlines) {
-      updateTicker(result.headlines, false, result.articles || []);
+    
+    // Only create ticker if enabled
+    if (currentSettings.enableTicker) {
+      createTicker();
+      
+      if (result.error) {
+        updateTicker(result.error, true);
+      } else if (result.headlines) {
+        updateTicker(result.headlines, false, result.articles || []);
+      }
     }
   } catch (err) {
     console.error('Error loading data:', err);
