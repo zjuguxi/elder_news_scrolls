@@ -79,13 +79,14 @@ async function fetchNews() {
   }
 
   try {
-    const response = await fetch(`https://newsapi.org/v2/top-headlines?country=us`, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Chrome Extension',
-        'X-Api-Key': currentApiKey
-      }
-    });
+    // MOCKING START: Simulate "No Articles" response
+    const data = {
+      status: "ok",
+      totalResults: 0,
+      articles: []
+    };
+    console.log('Using MOCKED news data (No Articles):', data);
+    // MOCKING END
 
     if (!response.ok) {
       // Attempt to parse error response from NewsAPI
